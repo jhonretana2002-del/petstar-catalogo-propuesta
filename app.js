@@ -1,137 +1,56 @@
-const $ = s => document.querySelector(s);
-const money = n => '₡' + Math.round(n).toLocaleString('es-CR');
-const weight = n => Number(n).toLocaleString('es-CR');
-const clean = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-let category = 'todos', query = '', brand = 'todos', cart = [], formats = {}, amounts = {}, toastTimer;
+const $=s=>document.querySelector(s),money=n=>'₡'+Math.round(n).toLocaleString('es-CR'),weight=n=>Number(n).toLocaleString('es-CR'),clean=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const DEPARTMENTS={alimentos:'Alimentos',arenas:'Arenas para gato',humedos:'Húmedos y atunes',paseo:'Correas y pecheras',juguetes:'Juguetes',peluches:'Peluches',higiene:'Higiene y jabones',snacks:'Snacks'};
+const PETS={perros:'Perros',gatos:'Gatos',hamsters:'Hámsters'};
+const WHATSAPP='https://wa.me/50688164568';
+let category='todos',department='todos',query='',brand='todos',cart=[],formats={},amounts={},toastTimer,slide=0,chatStarted=false;
+function art(p){if(!p.image)return `<div class="placeholder"><div><b>${p.brand==='Por confirmar'?'Hámsters':p.brand}</b><span>Fotografía por incorporar</span></div></div>`;const src=p.image.startsWith('data:')?p.image:'assets/'+p.image;const v=p.viewBox||[0,p.crop[0],720,p.crop[1]];return `<svg viewBox="0 0 ${v[2]} ${v[3]}" role="img" aria-label="${p.brand} ${p.name}${p.illustrative?', imagen ilustrativa':', fotografía del perfil'}"><svg x="0" y="0" width="${v[2]}" height="${v[3]}" viewBox="${v.join(' ')}" overflow="hidden"><image href="${src}" width="${p.imageWidth||720}" height="${p.imageHeight||1560}"/></svg></svg>`}
+function mode(p){return p.supportsBulk?(formats[p.id]||'pack'):'pack'}
+function amount(p){return amounts[p.id]??(mode(p)==='bulk'?p.minimum:1)}
+function unitPrice(p){return mode(p)==='bulk'?p.bulk:p.packPrice}
+function packLabel(p){return p.packLabel||weight(p.packWeight)+' kg'}
+function validAmount(p,n){return Number.isFinite(n)&&n>0&&n<=999&&(mode(p)==='pack'?Number.isInteger(n):n>=p.minimum&&Math.abs(n/p.step-Math.round(n/p.step))<.00001)}
+function showToast(msg){clearTimeout(toastTimer);$('#toast').textContent=msg;toastTimer=setTimeout(()=>$('#toast').textContent='',3200)}
+function jumpToCatalog(){ $('#catalogo').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})}
+function syncFilters(){ $('#search').value=query;$('#brandFilter').value=brand;$('#typeFilter').value=department}
+function chooseDepartment(key){department=key;category='todos';query='';brand='todos';$('#headerSearch').value='';syncFilters();render();jumpToCatalog()}
+function render(){const selected=PRODUCTS.filter(p=>(category==='todos'||p.category===category)&&(department==='todos'||p.department===department)&&(brand==='todos'||p.brand===brand)&&clean(p.brand+' '+p.name+' '+p.desc+' '+DEPARTMENTS[p.department]).includes(clean(query)));$('#resultCount').textContent=selected.length+(selected.length===1?' producto':' productos');document.querySelectorAll('button[data-category]').forEach(b=>{const on=b.dataset.category===category;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on))});document.querySelectorAll('[data-department]').forEach(b=>b.classList.toggle('active',b.dataset.department===department));$('#products').innerHTML=selected.length?selected.map(p=>{const bulk=mode(p)==='bulk',n=amount(p),valid=validAmount(p,n);return `<article class="product" data-id="${p.id}"><div class="product-art"><span class="tag">${p.illustrative?'Imagen ilustrativa':'Foto del perfil'}</span>${art(p)}</div><div class="product-body"><p class="product-brand">${p.brand}</p><h3>${p.name}</h3><p class="desc">${p.desc}</p>${p.supportsBulk?`<div class="formats" aria-label="Presentación para ${p.name}"><button data-mode="bulk" aria-pressed="${bulk}" class="${bulk?'active':''}">A granel</button><button data-mode="pack" aria-pressed="${!bulk}" class="${!bulk?'active':''}">${packLabel(p)}</button></div>`:`<div class="unit-presentation">${packLabel(p)}</div>`}<div class="price-row"><span class="price">${money(unitPrice(p))} <span class="unit">/ ${bulk?'kg':p.unit||'empaque'}</span></span><small class="price-example">Precio ilustrativo</small></div><div class="qtyrow"><label for="qty-${p.id}">${bulk?'Cantidad en kg':'Cantidad'}</label><input id="qty-${p.id}" type="number" inputmode="decimal" min="${bulk?p.minimum:1}" max="999" step="${bulk?p.step:1}" value="${n}" aria-label="Cantidad de ${p.brand} ${p.name}"></div><p class="subtotal">Subtotal: <strong data-subtotal>${valid?money(unitPrice(p)*n):'Revisá la cantidad'}</strong></p><button class="btn" data-add aria-label="Agregar ${p.brand} ${p.name} al pedido">Agregar al pedido +</button><button class="details-link" data-details="${p.id}">Ver producto ↗</button></div></article>`}).join(''):`<div class="empty"><h3>No encontramos ese producto.</h3><p>Probá otra búsqueda o explorá todas las categorías.</p><button class="btn" id="resetFilters">Ver todos los productos</button></div>`}
+function resetFilters(){category='todos';department='todos';query='';brand='todos';$('#headerSearch').value='';syncFilters();render()}
+function refreshCart(){let sum=0;$('#cartCount').textContent=cart.length;$('#cartLines').innerHTML=cart.length?cart.map((l,i)=>{sum+=l.total;return `<div class="cartline"><div><strong>${l.brand} · ${l.name}</strong><small>${l.label} · ${money(l.price)} / ${l.mode==='bulk'?'kg':l.unit}</small><button class="remove" data-remove="${i}">Quitar ${l.name}</button></div><strong>${money(l.total)}</strong></div>`}).join(''):'<p class="lead">Tu pedido está vacío. Explorá el catálogo y agregá tus favoritos.</p>';$('#cartTotal').textContent=money(sum);$('#prepareOrder').disabled=!cart.length;$('#clearCart').disabled=!cart.length;$('#orderSummary').hidden=true}
+function addProduct(p,n){if(!validAmount(p,n)){showToast(mode(p)==='bulk'?`Elegí al menos ${weight(p.minimum)} kg, en pasos de ${weight(p.step)} kg.`:'Elegí una cantidad entera entre 1 y 999.');return}const m=mode(p),price=unitPrice(p),ex=cart.find(l=>l.id===p.id&&l.mode===m);if(ex){if(ex.qty+n>999){showToast('El máximo para esta consulta es de 999 por presentación.');return}ex.qty+=n;ex.total=Math.round(ex.qty*price);ex.label=m==='bulk'?weight(ex.qty)+' kg a granel':ex.qty+' × '+packLabel(p)}else cart.push({id:p.id,brand:p.brand,name:p.name,mode:m,qty:n,price,unit:p.unit||'empaque',total:Math.round(n*price),label:m==='bulk'?weight(n)+' kg a granel':n+' × '+packLabel(p)});refreshCart();showToast(p.name+' agregado al pedido.')}
+function showDetails(id){const p=PRODUCTS.find(p=>p.id===id);$('#productDetail').innerHTML=`<div class="detail-art">${art(p)}</div><div class="detail-content"><p class="product-brand">${p.brand} · ${PETS[p.category]} · ${DEPARTMENTS[p.department]}</p><h2 id="productTitle">${p.name}</h2><p>${p.desc}</p><div class="detail-meta">${p.supportsBulk?`<div>A granel<strong>${money(p.bulk)} / kg</strong></div>`:''}<div>Precio por ${p.unit||'empaque'}<strong>${money(p.packPrice)}</strong></div><div>Presentación<strong>${packLabel(p)}</strong></div></div><p class="fine">${p.illustrative?'Imagen ilustrativa de la categoría. Marca, modelo y presentación se confirman con la tienda.':'Fotografía recibida del perfil de Facebook. La publicación no confirma existencias actuales.'} Los precios de esta vista son ilustrativos. Las promociones anteriores no se consideran vigentes.</p><button class="btn" data-find-product="${p.id}">Elegir cantidad ↗</button></div>`;$('#productDialog').showModal()}
+function selectExactProduct(id){const p=PRODUCTS.find(p=>p.id===id);category='todos';department='todos';brand=p.brand;query=p.name;$('#headerSearch').value='';syncFilters();if($('#productDialog').open)$('#productDialog').close();render();jumpToCatalog()}
+function renderFeatured(){const ids=['r-fresh','x-atun','x-correa','x-pechera','x-juguete','x-peluche','x-jabon','r-diamond','b1','x-sobre'];$('#featuredTrack').innerHTML=ids.map(id=>PRODUCTS.find(p=>p.id===id)).filter(Boolean).map(p=>`<article class="featured-card"><button class="featured-image-button" data-details="${p.id}" aria-label="Ver ${p.brand} ${p.name}"><div class="featured-art">${art(p)}</div></button><p class="product-brand">${p.brand==='Selección por confirmar'?DEPARTMENTS[p.department]:p.brand}</p><h3>${p.name}</h3><strong class="featured-price">${money(p.packPrice)}</strong><span class="price-example">Precio ilustrativo</span><button data-details="${p.id}">Ver producto <span aria-hidden="true">↗</span></button></article>`).join('')}
+function renderDepartments(){const picks={alimentos:'b1',arenas:'r-fresh',humedos:'x-atun',paseo:'x-pechera',juguetes:'x-juguete',peluches:'x-peluche',higiene:'x-jabon',snacks:'r-dentalife'};$('#departmentGrid').innerHTML=Object.entries(picks).map(([key,id])=>{const p=PRODUCTS.find(p=>p.id===id)||PRODUCTS.find(p=>p.department===key);return `<button data-department="${key}" aria-label="Explorar ${DEPARTMENTS[key]}"><span class="department-art">${art(p)}</span><strong>${DEPARTMENTS[key]}</strong></button>`}).join('')}
+function setCampaign(i){slide=(i+3)%3;document.querySelectorAll('[data-slide]').forEach((el,n)=>{el.hidden=n!==slide;el.classList.toggle('is-active',n===slide);el.setAttribute('aria-hidden',String(n!==slide))});document.querySelectorAll('[data-campaign]').forEach((b,n)=>{b.classList.toggle('active',n===slide);b.setAttribute('aria-pressed',String(n===slide))})}
+document.addEventListener('click',e=>{const dept=e.target.closest('[data-department]');if(dept){e.preventDefault();chooseDepartment(dept.dataset.department);return}const c=e.target.closest('[data-category]');if(c){category=c.dataset.category;if(c.tagName==='A'){department='todos';brand='todos';query='';$('#headerSearch').value='';syncFilters()}render();return}const b=e.target.closest('[data-brand]');if(b){brand=b.dataset.brand;category='todos';department='todos';query='';$('#headerSearch').value='';syncFilters();render();jumpToCatalog();return}const d=e.target.closest('[data-details]');if(d){showDetails(d.dataset.details);return}const f=e.target.closest('[data-find-product]');if(f){selectExactProduct(f.dataset.findProduct);return}if(e.target.closest('[data-close-product]')){$('#productDialog').close();return}if(e.target.closest('#resetFilters')){resetFilters();return}const a=e.target.closest('.product');if(a){const p=PRODUCTS.find(p=>p.id===a.dataset.id),m=e.target.closest('[data-mode]');if(m&&p.supportsBulk){formats[p.id]=m.dataset.mode;amounts[p.id]=m.dataset.mode==='bulk'?p.minimum:1;render();return}if(e.target.closest('[data-add]')){addProduct(p,Number(a.querySelector('input').value));return}}const rm=e.target.closest('[data-remove]');if(rm){cart.splice(Number(rm.dataset.remove),1);refreshCart()}if(e.target.closest('[data-close]'))$('#cartDialog').close();const cp=e.target.closest('[data-campaign]');if(cp)setCampaign(Number(cp.dataset.campaign));if(e.target.closest('[data-open-chat]'))openChat();const chat=e.target.closest('[data-chat]');if(chat){openChat();askChat(chat.dataset.chat)}});
+$('#products').addEventListener('input',e=>{if(!e.target.matches('input'))return;const a=e.target.closest('.product'),p=PRODUCTS.find(p=>p.id===a.dataset.id),n=Number(e.target.value);amounts[p.id]=n;a.querySelector('[data-subtotal]').textContent=validAmount(p,n)?money(unitPrice(p)*n):'Revisá la cantidad'});
+$('#search').addEventListener('input',e=>{query=e.target.value;render()});$('#clearSearch').onclick=()=>{query='';$('#search').value='';render();$('#search').focus()};$('#headerSearchForm').onsubmit=e=>{e.preventDefault();query=$('#headerSearch').value.trim();category='todos';department='todos';brand='todos';syncFilters();render();jumpToCatalog()};$('#brandFilter').innerHTML+=[...new Set(PRODUCTS.map(p=>p.brand))].sort().map(b=>`<option>${b}</option>`).join('');$('#brandFilter').onchange=e=>{brand=e.target.value;render()};$('#typeFilter').innerHTML+=Object.entries(DEPARTMENTS).map(([v,t])=>`<option value="${v}">${t}</option>`).join('');$('#typeFilter').onchange=e=>{department=e.target.value;render()};
+$('#featuredPrev').onclick=()=>$('#featuredTrack').scrollBy({left:-$('#featuredTrack').clientWidth*.85,behavior:'smooth'});$('#featuredNext').onclick=()=>$('#featuredTrack').scrollBy({left:$('#featuredTrack').clientWidth*.85,behavior:'smooth'});$('#campaignPrev').onclick=()=>setCampaign(slide-1);$('#campaignNext').onclick=()=>setCampaign(slide+1);
+$('#openCart').onclick=()=>{refreshCart();$('#cartDialog').showModal()};$('#clearCart').onclick=()=>{cart=[];refreshCart()};$('#prepareOrder').onclick=()=>{$('#orderSummary').hidden=false;$('#copyFeedback').textContent='';$('#orderText').value='CONSULTA DESDE LA DEMOSTRACIÓN DE PETSTAR - SIN CONFIRMAR\n\nHola, quisiera consultar estos productos:\n\n'+cart.map(l=>'- '+l.brand+' '+l.name+' | '+l.label+' | '+money(l.total)+' ilustrativo').join('\n')+'\n\nSubtotal ilustrativo: '+money(cart.reduce((s,l)=>s+l.total,0))+'\nEntrega no incluida. Por favor confirmar precios vigentes, existencias, presentación y forma de entrega antes de comprar.'};$('#copyOrder').onclick=async()=>{try{await navigator.clipboard.writeText($('#orderText').value);$('#copyFeedback').textContent='Consulta copiada. Podés revisarla y compartirla con la tienda.'}catch{$('#orderText').focus();$('#orderText').select();$('#copyFeedback').textContent='Seleccioná el texto y usá Copiar en tu dispositivo.'}};
+$('#expressForm').onsubmit=e=>{e.preventDefault();const zone=$('#expressZone').value.trim();if(zone.length<2){$('#expressZone').setCustomValidity('Escribí tu distrito o zona.');$('#expressZone').reportValidity();return}$('#expressZone').setCustomValidity('');const url=WHATSAPP+'?text='+encodeURIComponent('Hola, PetStar. Quisiera consultar el servicio express para '+zone+'. ¿Tienen cobertura? ¿Cuál sería la tarifa y el horario disponible?');$('#expressFallback').href=url;$('#expressFallback').hidden=false;window.open(url,'_blank','noopener,noreferrer')};$('#expressZone').oninput=()=>$('#expressZone').setCustomValidity('');
 
-function art(p) {
-  if (!p.image) return `<div class="placeholder"><div><b>${p.brand === 'Por confirmar' ? 'Hámsters' : p.brand}</b><span>${p.brand === 'Por confirmar' ? 'Marca e imagen por confirmar' : 'Fotografía por incorporar'}</span></div></div>`;
-  const source = p.image.startsWith('data:') ? p.image : 'assets/' + p.image;
-  return `<svg viewBox="0 ${p.crop[0]} 720 ${p.crop[1]}" role="img" aria-label="${p.brand} ${p.name}, foto aportada por el cliente"><image href="${source}" width="720" height="1560"/></svg>`;
-}
-function mode(p) { return formats[p.id] || 'pack'; }
-function amount(p) { return amounts[p.id] ?? (mode(p) === 'bulk' ? p.minimum : 1); }
-function unitPrice(p) { return mode(p) === 'bulk' ? p.bulk : p.packPrice; }
-function validAmount(p, n) {
-  return Number.isFinite(n) && n > 0 && n <= 999 && (mode(p) === 'pack' ? Number.isInteger(n) : n >= p.minimum && Math.abs(n / p.step - Math.round(n / p.step)) < .00001);
-}
-function showToast(msg) {
-  clearTimeout(toastTimer);
-  $('#toast').textContent = msg;
-  toastTimer = setTimeout(() => $('#toast').textContent = '', 3300);
-}
-function jumpToCatalog() { $('#catalogo').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); }
-function render() {
-  const selected = PRODUCTS.filter(p => (category === 'todos' || p.category === category) && (brand === 'todos' || p.brand === brand) && clean(p.brand + ' ' + p.name + ' ' + p.desc).includes(clean(query)));
-  $('#resultCount').textContent = selected.length + (selected.length === 1 ? ' producto en la muestra' : ' productos en la muestra');
-  document.querySelectorAll('button[data-category]').forEach(b => {
-    const active = b.dataset.category === category;
-    b.classList.toggle('active', active);
-    b.setAttribute('aria-pressed', String(active));
-  });
-  $('#products').innerHTML = selected.length ? selected.map(p => {
-    const bulk = mode(p) === 'bulk', n = amount(p), valid = validAmount(p, n);
-    return `<article class="product" data-id="${p.id}">
-      <div class="product-art"><span class="tag">${p.image ? 'Visto en PetStar · 2025' : 'Ficha por completar'}</span>${art(p)}</div>
-      <div class="product-body"><p class="product-brand">${p.brand}</p><h3>${p.name}</h3><p class="desc">${p.desc}</p>
-      <div class="formats" aria-label="Presentación para ${p.brand} ${p.name}"><button data-mode="bulk" aria-pressed="${bulk}" class="${bulk ? 'active' : ''}">A granel</button><button data-mode="pack" aria-pressed="${!bulk}" class="${!bulk ? 'active' : ''}">Empaque ${weight(p.packWeight)} kg</button></div>
-      <div class="price-row"><span class="price">${money(unitPrice(p))} <span class="unit">/ ${bulk ? 'kg' : 'empaque'}</span></span></div>
-      <div class="qtyrow"><label for="qty-${p.id}">${bulk ? 'Cantidad en kg' : 'N.º de empaques'}</label><input id="qty-${p.id}" type="number" inputmode="decimal" min="${bulk ? p.minimum : 1}" max="999" step="${bulk ? p.step : 1}" value="${n}" aria-label="Cantidad de ${p.brand} ${p.name}"></div>
-      <p class="subtotal">Subtotal demo: <strong data-subtotal>${valid ? money(unitPrice(p) * n) : 'Revisá la cantidad'}</strong></p>
-      <button class="btn" data-add aria-label="Agregar ${p.brand} ${p.name} al pedido">A mi tacita <span aria-hidden="true">+</span></button><button class="details-link" data-details="${p.id}">Conocer el producto ↗</button></div></article>`;
-  }).join('') : `<div class="empty"><h3>Ese favorito no aparece en la muestra.</h3><p>Probá otra marca o volvé al catálogo completo.</p><button class="btn" id="resetFilters">Ver todos los productos</button></div>`;
-}
-function resetFilters() {
-  category = 'todos'; query = ''; brand = 'todos';
-  $('#search').value = ''; $('#headerSearch').value = ''; $('#brandFilter').value = 'todos'; render();
-}
-function refreshCart() {
-  let sum = 0;
-  $('#cartCount').textContent = cart.length;
-  $('#cartLines').innerHTML = cart.length ? cart.map((l, i) => {
-    sum += l.total;
-    return `<div class="cartline"><div><strong>${l.brand} · ${l.name}</strong><small>${l.label} · ${money(l.price)} / ${l.mode === 'bulk' ? 'kg' : 'empaque'}</small><button class="remove" data-remove="${i}">Quitar ${l.name}</button></div><strong>${money(l.total)}</strong></div>`;
-  }).join('') : '<p class="lead">Tu tacita está vacía. Agregá un alimento para probar cómo sería tu pedido.</p>';
-  $('#cartTotal').textContent = money(sum);
-  $('#prepareOrder').disabled = !cart.length;
-  $('#clearCart').disabled = !cart.length;
-  $('#orderSummary').hidden = true;
-}
-function addProduct(p, value) {
-  if (!validAmount(p, value)) {
-    showToast(mode(p) === 'bulk' ? `Elegí al menos ${weight(p.minimum)} kg, en pasos de ${weight(p.step)} kg.` : 'Elegí una cantidad entera de empaques entre 1 y 999.');
-    return;
-  }
-  const m = mode(p), price = unitPrice(p), existing = cart.find(l => l.id === p.id && l.mode === m);
-  if (existing) {
-    existing.qty += value;
-    existing.total = Math.round(existing.qty * price);
-    existing.label = m === 'bulk' ? weight(existing.qty) + ' kg a granel' : existing.qty + ' × empaque de ' + weight(p.packWeight) + ' kg';
-  } else cart.push({ id: p.id, brand: p.brand, name: p.name, mode: m, qty: value, price, total: Math.round(value * price), label: m === 'bulk' ? weight(value) + ' kg a granel' : value + ' × empaque de ' + weight(p.packWeight) + ' kg' });
-  refreshCart(); showToast(p.brand + ' ya está en tu tacita de ejemplo.');
-}
-function showDetails(id) {
-  const p = PRODUCTS.find(p => p.id === id);
-  const categoryNames = { perros: 'Perros', gatos: 'Gatos', hamsters: 'Hámsters' };
-  $('#productDetail').innerHTML = `<div class="detail-art">${art(p)}</div><div class="detail-content"><p class="product-brand">${p.brand} · ${categoryNames[p.category]}</p><h2 id="productTitle">${p.name}</h2><p>${p.desc}</p><div class="detail-meta"><div>A granel · demo<strong>${money(p.bulk)} / kg</strong></div><div>Empaque · demo<strong>${money(p.packPrice)}</strong></div><div>Empaque de referencia<strong>${weight(p.packWeight)} kg${p.weightVerified ? '' : ' · ejemplo'}</strong></div><div>Mínimo a granel · demo<strong>${weight(p.minimum)} kg</strong></div></div><p class="fine">${p.image ? 'Imagen recibida del cliente, de una publicación de PetStar en 2025.' : 'Ficha de referencia pendiente de fotografía y validación por la tienda.'} Precios ficticios. Modalidades de venta y existencias por confirmar.</p><button class="btn" data-find-product="${p.id}">Elegir presentación ↗</button></div>`;
-  $('#productDialog').showModal();
-}
-function selectExactProduct(id) {
-  const p = PRODUCTS.find(p => p.id === id);
-  category = 'todos'; brand = p.brand; query = p.name;
-  $('#search').value = query; $('#headerSearch').value = ''; $('#brandFilter').value = brand;
-  if ($('#productDialog').open) $('#productDialog').close();
-  render(); jumpToCatalog();
-}
-function renderFeatured() {
-  $('#featuredTrack').innerHTML = PRODUCTS.filter(p => p.image).map(p => `<article class="featured-card"><div class="featured-art">${art(p)}</div><p class="product-brand">${p.brand}</p><h3>${p.name}</h3><button data-details="${p.id}" aria-label="Conocer ${p.brand} ${p.name}">Conocé este producto <span aria-hidden="true">↗</span></button></article>`).join('');
-}
-document.addEventListener('click', e => {
-  const categoryButton = e.target.closest('[data-category]');
-  if (categoryButton) {
-    category = categoryButton.dataset.category;
-    if (categoryButton.tagName === 'A') { brand = 'todos'; query = ''; $('#search').value = ''; $('#brandFilter').value = 'todos'; }
-    render(); return;
-  }
-  const brandButton = e.target.closest('[data-brand]');
-  if (brandButton) { brand = brandButton.dataset.brand; category = 'todos'; query = ''; $('#brandFilter').value = brand; $('#search').value = ''; render(); jumpToCatalog(); return; }
-  const detailButton = e.target.closest('[data-details]');
-  if (detailButton) { showDetails(detailButton.dataset.details); return; }
-  const findButton = e.target.closest('[data-find-product]');
-  if (findButton) { selectExactProduct(findButton.dataset.findProduct); return; }
-  if (e.target.closest('[data-close-product]')) { $('#productDialog').close(); return; }
-  if (e.target.closest('#resetFilters')) { resetFilters(); return; }
-  const article = e.target.closest('.product');
-  if (article) {
-    const p = PRODUCTS.find(p => p.id === article.dataset.id), formatButton = e.target.closest('[data-mode]');
-    if (formatButton) { formats[p.id] = formatButton.dataset.mode; amounts[p.id] = formatButton.dataset.mode === 'bulk' ? p.minimum : 1; render(); return; }
-    if (e.target.closest('[data-add]')) { addProduct(p, Number(article.querySelector('input').value)); return; }
-  }
-  const removeButton = e.target.closest('[data-remove]');
-  if (removeButton) { cart.splice(Number(removeButton.dataset.remove), 1); refreshCart(); }
-  if (e.target.closest('[data-close]')) $('#cartDialog').close();
-});
-$('#products').addEventListener('input', e => {
-  if (!e.target.matches('input')) return;
-  const article = e.target.closest('.product'), p = PRODUCTS.find(p => p.id === article.dataset.id), n = Number(e.target.value);
-  amounts[p.id] = n;
-  article.querySelector('[data-subtotal]').textContent = validAmount(p, n) ? money(unitPrice(p) * n) : 'Revisá la cantidad';
-});
-$('#search').addEventListener('input', e => { query = e.target.value; render(); });
-$('#clearSearch').onclick = () => { query = ''; $('#search').value = ''; render(); $('#search').focus(); };
-$('#headerSearchForm').onsubmit = e => { e.preventDefault(); query = $('#headerSearch').value; category = 'todos'; brand = 'todos'; $('#search').value = query; $('#brandFilter').value = 'todos'; render(); jumpToCatalog(); };
-$('#brandFilter').innerHTML += [...new Set(PRODUCTS.map(p => p.brand))].sort().map(b => `<option>${b}</option>`).join('');
-$('#brandFilter').onchange = e => { brand = e.target.value; render(); };
-$('#featuredPrev').onclick = () => $('#featuredTrack').scrollBy({ left: -$('#featuredTrack').clientWidth * .85, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-$('#featuredNext').onclick = () => $('#featuredTrack').scrollBy({ left: $('#featuredTrack').clientWidth * .85, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-$('#openCart').onclick = () => { refreshCart(); $('#cartDialog').showModal(); };
-$('#clearCart').onclick = () => { cart = []; refreshCart(); };
-$('#prepareOrder').onclick = () => {
-  $('#orderSummary').hidden = false; $('#copyFeedback').textContent = '';
-  $('#orderText').value = 'DEMO DE PROPUESTA PETSTAR - NO ES UN PEDIDO REAL\n\nHola, PetStar. Así se vería una consulta desde el catálogo:\n\n' + cart.map(l => '- ' + l.brand + ' ' + l.name + ' | ' + l.label + ' | ' + money(l.total)).join('\n') + '\n\nSubtotal ilustrativo: ' + money(cart.reduce((s, l) => s + l.total, 0)) + '\nPrecios ficticios. Entrega no incluida.\n\nEn la tienda final se consultaría disponibilidad, precio vigente, entrega y forma de pago antes de confirmar la compra.';
-};
-$('#copyOrder').onclick = async () => {
-  try { await navigator.clipboard.writeText($('#orderText').value); $('#copyFeedback').textContent = 'Mensaje copiado. Esta demostración no envía pedidos.'; }
-  catch { $('#orderText').focus(); $('#orderText').select(); $('#copyFeedback').textContent = 'Seleccioná y copiá el texto con la opción Copiar de tu dispositivo.'; }
-};
-render(); renderFeatured(); refreshCart();
+function addChat(role,text,actions=[]){const msg=document.createElement('div');msg.className='chat-message '+role;const name=document.createElement('small');name.textContent=role==='user'?'Vos':'Estrella';const body=document.createElement('p');body.textContent=text;msg.append(name,body);if(actions.length){const row=document.createElement('div');row.className='chat-actions';for(const action of actions){const el=document.createElement(action.url?'a':'button');el.textContent=action.label;if(action.url){el.href=action.url;el.target='_blank';el.rel='noopener'}else el.onclick=action.run;row.append(el)}msg.append(row)}$('#chatMessages').append(msg);$('#chatMessages').scrollTop=$('#chatMessages').scrollHeight}
+function openChat(){ $('#chatPanel').hidden=false;$('#chatLauncher').setAttribute('aria-expanded','true');if(!chatStarted){chatStarted=true;addChat('bot','¡Hola! Soy Estrella, la asistente de PetStar. Te ayudo a encontrar productos, conocer las categorías o consultar el servicio express. ¿Qué estás buscando?')}$('#chatInput').focus()}
+function closeChat(){ $('#chatPanel').hidden=true;$('#chatLauncher').setAttribute('aria-expanded','false');$('#chatLauncher').focus()}
+const humanAction=()=>({label:'Hablar por WhatsApp ↗',url:WHATSAPP});
+function botReply(input){const q=clean(input);if(/express|envio|entrega|domicilio|transporte/.test(q)){addChat('bot','Para coordinar express, el equipo debe confirmar cobertura, tarifa y horario. Podés indicar tu distrito en la sección de express o consultarlo directamente por WhatsApp.',[{label:'Consultar mi zona',run:()=>{closeChat();$('#express').scrollIntoView({behavior:'smooth'});$('#expressZone').focus()}},humanAction()]);return}if(/horario|abren|cierran|domingo|sabado/.test(q)){addChat('bot','El horario vigente no está confirmado en la información revisada. Consultalo con el equipo antes de visitar la tienda.',[humanAction()]);return}if(/ubicacion|direccion|donde|visitar|llegar/.test(q)){addChat('bot','El perfil de PetStar indica Desamparados, San José, y una referencia de 125 metros al este de la entrada principal del mall. Confirmá la referencia actual con el equipo antes de ir.',[{label:'Ver ubicación',url:'https://www.google.com/maps/search/?api=1&query=PetStar+Desamparados+Costa+Rica'},humanAction()]);return}if(/humano|persona|contact|telefono|whatsapp|asesor/.test(q)){addChat('bot','Podés hablar con el equipo de PetStar por WhatsApp al 8816 4568 para confirmar productos, precios y entrega.',[humanAction()]);return}if(/stock|existencia|disponib|tienen/.test(q)&&!/(arena|atun|correa|pechera|juguete|jabon|peluche)/.test(q)){addChat('bot','Puedo mostrarte las referencias del catálogo, pero no tengo inventario en tiempo real. El equipo confirma existencias y precios vigentes por WhatsApp.',[humanAction()]);return}const intents=[['arenas',/arena|fresh step|benton|cat litter|hola pets/],['humedos',/atun|humedo|lata|sobre/],['paseo',/correa|pechera|perchera|arnes|paseo/],['peluches',/peluche/],['juguetes',/juguete|pelota|cuerda|mordedor/],['higiene',/jabon|champu|shampoo|higiene|bano/],['snacks',/snack|dentalife|premio/],['alimentos',/alimento|comida|granel|saco|croqueta/]];const intent=intents.find(([,re])=>re.test(q));if(intent){const key=intent[0],matches=PRODUCTS.filter(p=>p.department===key);let reply=`En el catálogo de muestra podés explorar ${DEPARTMENTS[key].toLowerCase()}. `;if(key==='arenas')reply+='En las referencias de Facebook aparecen Fresh Step, Hola Pets, Cat Litter y bentonita. ';reply+='Los precios mostrados son ilustrativos; consultá marcas, modelos y disponibilidad con la tienda.';if(/precio|cuesta|vale/.test(q)&&matches.length)reply+=` Como ejemplo, ${matches[0].name} figura en ${money(matches[0].packPrice)} por ${matches[0].unit||'empaque'}.`;addChat('bot',reply,[{label:'Ver '+DEPARTMENTS[key],run:()=>{closeChat();chooseDepartment(key)}},humanAction()]);return}const known=[...new Set(PRODUCTS.map(p=>p.brand))].filter(b=>!b.includes('confirmar')).find(b=>q.includes(clean(b)));if(known){addChat('bot',`Podés explorar las referencias de ${known} en el catálogo. Las fotos de publicaciones anteriores no confirman stock actual.`,[{label:'Ver '+known,run:()=>{closeChat();brand=known;category='todos';department='todos';query='';syncFilters();render();jumpToCatalog()}},humanAction()]);return}if(/precio|cuanto|costo|pago|sinpe|tarjeta/.test(q)){addChat('bot','Los precios de esta vista son ilustrativos. El equipo confirma el precio final y los medios de pago disponibles antes de la compra.',[humanAction()]);return}if(/hola|buenas|buenos|gracias/.test(q)){addChat('bot','¡Con gusto! Puedo ayudarte con alimentos, arena, atunes, correas, pecheras, juguetes, peluches, jabones o servicio express.');return}addChat('bot','Te puedo orientar sobre las categorías del catálogo, la ubicación y el servicio express. Si buscás un producto específico que no aparece, el equipo puede confirmártelo por WhatsApp.',[humanAction()])}
+function askChat(value){const text=value.trim().slice(0,240);if(!text)return;addChat('user',text);$('#chatInput').value='';botReply(text)}
+$('#chatLauncher').onclick=()=>$('#chatPanel').hidden?openChat():closeChat();$('#closeChat').onclick=closeChat;$('#chatForm').onsubmit=e=>{e.preventDefault();askChat($('#chatInput').value)};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#chatPanel').hidden)closeChat()});
+render();renderFeatured();renderDepartments();refreshCart();setCampaign(0);
+
+// Movimiento automático con controles y pausa al interactuar.
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let campaignPaused=reduceMotion.matches,railPaused=reduceMotion.matches,campaignTimer=null,railFrame=null,railLast=0,railHoldUntil=0;
+const heroRoot=$('.store-hero'),railRoot=$('#seleccion'),track=$('#featuredTrack');
+const heroPause=document.createElement('button');heroPause.className='motion-pause campaign-pause';heroPause.type='button';heroPause.setAttribute('aria-label','Pausar movimiento de banners');heroRoot.append(heroPause);
+const railPause=document.createElement('button');railPause.className='motion-pause rail-pause';railPause.type='button';railPause.setAttribute('aria-label','Pausar movimiento de productos');$('.rail-controls').prepend(railPause);
+function updateMotionButtons(){heroPause.textContent=campaignPaused?'▶':'Ⅱ';heroPause.setAttribute('aria-label',campaignPaused?'Reanudar movimiento de banners':'Pausar movimiento de banners');heroPause.setAttribute('aria-pressed',String(campaignPaused));railPause.textContent=railPaused?'▶':'Ⅱ';railPause.setAttribute('aria-label',railPaused?'Reanudar movimiento de productos':'Pausar movimiento de productos');railPause.setAttribute('aria-pressed',String(railPaused))}
+function heroBusy(){return $('#campaigns').matches(':hover')||(heroRoot.contains(document.activeElement)&&document.activeElement!==heroPause)||document.hidden||!!document.querySelector('dialog[open]')}
+function startCampaignTimer(){clearInterval(campaignTimer);if(!reduceMotion.matches)campaignTimer=setInterval(()=>{if(!campaignPaused&&!heroBusy())setCampaign(slide+1)},6000)}
+heroPause.onclick=()=>{campaignPaused=!campaignPaused;updateMotionButtons()};railPause.onclick=()=>{railPaused=!railPaused;updateMotionButtons()};
+const originalCards=[...track.children];for(const card of originalCards){const clone=card.cloneNode(true);clone.dataset.clone='true';clone.setAttribute('aria-hidden','true');clone.querySelectorAll('button,a,input').forEach(el=>el.tabIndex=-1);track.append(clone)}
+function railBusy(){const rect=track.getBoundingClientRect();return railPaused||reduceMotion.matches||document.hidden||!!document.querySelector('dialog[open]')||rect.bottom<0||rect.top>innerHeight||track.matches(':hover')||(railRoot.contains(document.activeElement)&&document.activeElement!==railPause)||performance.now()<railHoldUntil}
+function animateRail(now){const dt=Math.min(now-railLast,50);railLast=now;if(!railBusy()){const clone=track.querySelector('[data-clone]'),cycle=clone?clone.offsetLeft-track.firstElementChild.offsetLeft:0;track.scrollLeft+=dt*.032;if(cycle&&track.scrollLeft>=cycle)track.scrollLeft-=cycle}railFrame=requestAnimationFrame(animateRail)}
+track.addEventListener('pointerdown',()=>railHoldUntil=performance.now()+5000);track.addEventListener('touchstart',()=>railHoldUntil=performance.now()+6000,{passive:true});$('#featuredPrev').addEventListener('click',()=>railHoldUntil=performance.now()+6000);$('#featuredNext').addEventListener('click',()=>railHoldUntil=performance.now()+6000);
+reduceMotion.addEventListener('change',()=>{campaignPaused=reduceMotion.matches;railPaused=reduceMotion.matches;updateMotionButtons();startCampaignTimer()});
+updateMotionButtons();startCampaignTimer();railLast=performance.now();railFrame=requestAnimationFrame(animateRail);

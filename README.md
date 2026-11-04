@@ -1,4 +1,33 @@
-# PetStar · Catálogo y tienda virtual
+# PetStar · Tienda de mascotas
+
+La portada actual se presenta como una tienda para el visitante. El menú contiene **Visítanos, Contáctanos, Productos y Servicio express**; conserva el buscador y elimina la franja superior de ubicación/teléfono y los enlaces comerciales «Ver la propuesta».
+
+## Versión actual
+
+- 38 fichas entre alimentación, arenas, húmedos/atunes, paseo, juguetes, peluches, higiene y snacks.
+- Fotografías facilitadas por el cliente de Balance, NutriSource, PureVita, Dog Chow, Cat Chow, Pro Plan, Ownat, Diamond, Fresh Step, Hola Pets, Cat Litter y bentonita.
+- Accesorios y húmedos sin referencia confirmada se muestran con imágenes genéricas ilustrativas. No constituyen inventario confirmado de la tienda.
+- Banners manuales, recorrido de productos, filtros por mascota, categoría y marca, búsqueda y detalle ampliado.
+- Cantidades por peso para alimentos habilitados en la demo; unidades/empaques para arenas y accesorios. Carrito con subtotal y consulta copiable.
+- WhatsApp de contacto y chatbot **Estrella**, un asistente guiado local que orienta por categorías, ubicación y express. No usa un modelo externo ni accede a inventario en tiempo real. No confirma existencias ni responde como representante humano.
+- Formulario de consulta express por distrito/zona. Abre un borrador en WhatsApp; no envía mensajes automáticamente. Cobertura, tarifas y tiempos pendientes de confirmación.
+- La web no cobra, reserva existencias ni transmite el chat del asistente a un servidor.
+- Los banners cambian automáticamente cada seis segundos. El recorrido de productos se desplaza de forma continua, con controles, pausa al interactuar y respeto a la preferencia de movimiento reducido.
+- Las 33 referencias con fotografía se presentan sin fondo: 26 recortes de productos y una lámina transparente con los siete accesorios ilustrativos. Los originales se conservan aparte para cotejar los empaques antes de usar el catálogo comercialmente. Se utilizó la herramienta integrada de imágenes para retirar fondos, publicidad y elementos externos al empaque; los archivos WebP conservan transparencia.
+
+## Datos y referencias
+
+El Facebook público de PetStar confirma ubicación general en Desamparados y contacto 8816 4568. La publicación de [Fresh Step del 1 de julio de 2025](https://www.facebook.com/petstar506/posts/pfbid035dRn21Ha2JsxpWNrkjGtiRCtfM9FfGGVrTqCJEdvf6vCYys4ZW7JU48dYvcMBrvCl) menciona arena de 7 libras. También se revisó la galería pública de productos. Las imágenes adicionales fueron aportadas por el cliente el 4 de noviembre de 2026.
+
+Se conservaron las imágenes completas; los recuadros del diseño muestran el producto mediante el `viewBox` del SVG, sin reconstruir sus empaques. La imagen repetida de Diamond se incluyó una sola vez. Las promociones y obsequios de publicaciones anteriores no se anuncian como vigentes. Todos los precios de la demostración son ilustrativos y se deben reemplazar o confirmar antes de vender.
+
+Las imágenes ambientales del hogar y la lámina genérica de accesorios se generaron con IA mediante la herramienta integrada. Prompts: fotografía de perro y gato en un hogar luminoso con espacio libre para texto; y ocho fotografías de producto sin marcas sobre fondo blanco (arena, lata de atún, correa, pechera, juguetes, peluche, jabón y sobre húmedo). No representan fotografías de inventario real de PetStar.
+
+Sitio estático publicado desde `main` en GitHub Pages. `products.js` contiene los datos; `app.js`, las interacciones; `style.css`, el diseño; `index.html`, la portada. Fredoka y Nunito se distribuyen con sus licencias SIL en `assets/`.
+
+---
+
+El siguiente registro corresponde a las primeras versiones del concepto y conserva contexto de diseño; la portada actual ya no muestra la propuesta comercial ni descargas de PDF.
 
 Propuesta visual preparada para PetStar, tienda de alimentos para mascotas en Desamparados, Costa Rica.
 
