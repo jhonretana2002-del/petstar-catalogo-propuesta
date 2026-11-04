@@ -4,6 +4,12 @@ La portada actual se presenta como una tienda para el visitante. El menú contie
 
 ## Versión actual
 
+- Compra de demostración completa: Comprar ahora o carrito, cantidades editables, datos de ejemplo, retiro/express, selección ilustrativa de pago, revisión y confirmación con código DEMO.
+- El express del checkout suma ₡1 500 como ejemplo; no es la tarifa confirmada del negocio. No hay pasarela, cobros, reserva de inventario ni envío de pedidos.
+- El carrito se conserva localmente con identificadores y cantidades; precios y nombres se reconstruyen desde el catálogo. No se guardan los datos personales del formulario al recargar.
+- Para presentar rápido: Mi pedido → Cargar productos de ejemplo → Continuar compra → Usar datos de ejemplo → Revisar mi compra → Confirmar compra de prueba. La confirmación permite repetir la demostración.
+- Fondos con la paleta del logo y huellitas decorativas; fotos de productos sobre blanco.
+
 - 38 fichas entre alimentación, arenas, húmedos/atunes, paseo, juguetes, peluches, higiene y snacks.
 - Fotografías facilitadas por el cliente de Balance, NutriSource, PureVita, Dog Chow, Cat Chow, Pro Plan, Ownat, Diamond, Fresh Step, Hola Pets, Cat Litter y bentonita.
 - Accesorios y húmedos sin referencia confirmada se muestran con imágenes genéricas ilustrativas. No constituyen inventario confirmado de la tienda.
