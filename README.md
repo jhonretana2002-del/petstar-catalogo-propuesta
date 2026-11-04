@@ -2,6 +2,8 @@
 
 Propuesta visual preparada para PetStar, tienda de alimentos para mascotas en Desamparados, Costa Rica.
 
+La segunda dirección visual toma las referencias indicadas por el cliente: [Ticolitas](https://www.ticolitas.com/) y la propuesta anterior de [La Bodeguita de mi Mascota](https://jhonretana2002-del.github.io/pagina-veterinaria/). Incluye amarillo protagonista, turquesa y coral del logo, tipografía redondeada, huellas ambientales, mascotas integradas en la portada, categorías con fotografías y un recorrido de productos.
+
 ## Qué incluye
 
 - Catálogo con 16 fichas de muestra y filtros por mascota y marca.
@@ -10,6 +12,8 @@ Propuesta visual preparada para PetStar, tienda de alimentos para mascotas en De
 - Mensaje de consulta que se puede copiar; la demo no envía pedidos.
 - Propuesta y catálogo PDF de 8 páginas, descargable desde la web.
 - Diseño adaptable a pantallas pequeñas.
+- Búsqueda desde el encabezado, accesos por marca y carrusel manual de productos.
+- Detalle de cada ficha con fotografía, presentación y precios de demostración.
 
 ## Aviso de demostración
 
@@ -34,3 +38,5 @@ GitHub Pages publica desde la rama `main`, carpeta raíz. Para revisar localment
 - [Grupo Coris](https://products.grupocoris.com/catalogo_treats_es): Pro Pet Adulto y referencia de empaque de 18 kg.
 
 Consulta de referencias: 4 de noviembre de 2026. El logo fue aportado por el cliente; las marcas y sus empaques pertenecen a sus titulares. La imagen de portada de perro, gato y hámster fue generada con IA mediante la herramienta integrada, con este prompt: retrato fotográfico de estudio de un golden retriever, un gato atigrado y un hámster sobre fondo durazno, sin texto ni logotipos.
+
+En la segunda versión se generó un recorte transparente de esas mascotas y un tríptico fotográfico de categorías: perro sobre turquesa, gato sobre rosa y hámster sobre amarillo. Se conservaron como archivos locales. Las fuentes Fredoka y Nunito se distribuyen junto con sus licencias SIL Open Font License en `assets/`.
